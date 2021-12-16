@@ -1,0 +1,51 @@
+version: "3.8"
+
+services:
+
+  localstack:
+    container_name: "localstack_main"
+    image: localstack/localstack:0.13.1
+    ports:
+      - "127.0.0.1:4566:4566"
+    environment:
+      - SERVICES=sqs,lambda,iam
+      - EAGER_SERVICE_LOADING=true
+      - DEBUG=1
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - LAMBDA_EXECUTOR=docker
+      - LAMBDA_REMOTE_DOCKER=true
+      - LAMBDA_DOCKER_NETWORK=test-aws-php_default
+      - HOSTNAME=dev.localstack.test-aws-php.com
+      - HOSTNAME_EXTERNAL=dev.localstack.test-aws-php.com
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /tmp/test-aws-php/localstack:/tmp/localstack
+    networks:
+      default:
+        aliases:
+          - dev.localstack.test-aws-php.com
+
+  terraform:
+    image: hashicorp/terraform:1.1.0
+    volumes:
+      - ../../:/project
+
+  aws-cli:
+    image: amazon/aws-cli
+    environment:
+      - AWS_DEFAULT_REGION=us-east-1
+      - AWS_ACCESS_KEY_ID=not-necessary-for-localstack
+      - AWS_SECRET_ACCESS_KEY=not-necessary-for-localstack
+    volumes:
+      - "../../dist:/dist"
+
+  php-cli:
+    build:
+      context: php-cli
+    working_dir: /src
+    environment:
+      - AWS_DEFAULT_REGION=us-east-1
+      - AWS_ACCESS_KEY_ID=not-necessary-for-localstack
+      - AWS_SECRET_ACCESS_KEY=not-necessary-for-localstack
+    volumes:
+      - ../../src/php/traffic-processor/:/src
